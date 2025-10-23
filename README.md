@@ -34,7 +34,7 @@ The VHDL designs are given in two kinds of dataset for comparitative analysis.
   prompt: "dut_code": "-- VHDL entity code here",
   response: "tb_code": "-- Corresponding synthetic testbench here",
   }
-}
+
 
 {
  {
@@ -45,7 +45,7 @@ The VHDL designs are given in two kinds of dataset for comparitative analysis.
   prompt: "dut_code + corner_cases"
   response: "tb_code": "-- Corresponding synthetic testbench here"
 }
-
+}
 
 
 
