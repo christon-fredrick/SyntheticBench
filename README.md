@@ -3,7 +3,8 @@
 ## Overview
 This repository contains a **synthetic dataset** of VHDL design and testbench pairs, derived from 
 [`rtl-llm/vhdl_github_deduplicated`](https://huggingface.co/datasets/rtl-llm/vhdl_github_deduplicated) 
-and extended with **synthetic testbenches** generated using **DeepSeek-V3** and validated to be simulatable using **GHDL**.  
+and extended with **synthetic testbenches** generated using **DeepSeek-V3** and validated to be simulatable using **GHDL**.
+(The both single-stage and the dual-stage dataset are removed for privacy purposes. Only after the research paper regarding the dataset is published, it will be released.)
 
 The dataset is intended for **LLM fine-tuning** and **digital design verification** research.
 
