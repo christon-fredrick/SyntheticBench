@@ -151,9 +151,32 @@ class VHDLRepair:
             except:
                 pass
     
+    def is_hierarchical(self, vhdl_code: str) -> bool:
+        """
+        Check if VHDL design uses hierarchical components.
+        
+        Args:
+            vhdl_code: VHDL source code
+            
+        Returns:
+            True if design contains component instantiations
+        """
+        # Check for component declarations or instantiations
+        patterns = [
+            r'\bcomponent\s+\w+\s+is',
+            r'\w+\s*:\s*\w+\s+port\s+map',
+            r'\w+\s*:\s*entity\s+\w+\.\w+',
+        ]
+        
+        for pattern in patterns:
+            if re.search(pattern, vhdl_code, re.IGNORECASE):
+                return True
+        
+        return False
+    
     def repair_design(self, vhdl_code: str, error_log: str) -> Optional[str]:
         """
-        Attempt to repair VHDL design.
+        Attempt to repair VHDL design with hierarchical flattening.
         
         Args:
             vhdl_code: Original VHDL code
@@ -162,23 +185,32 @@ class VHDLRepair:
         Returns:
             Repaired VHDL code or None on failure
         """
+        # Check if design is hierarchical
+        is_hierarchical = self.is_hierarchical(vhdl_code)
+        
+        flatten_instruction = ""
+        if is_hierarchical:
+            flatten_instruction = """
+3. IMPORTANT: This design uses hierarchical components. You MUST FLATTEN it into a single entity + single architecture design with NO component instantiations or entity instantiations.
+   - Inline all component logic directly into the main architecture
+   - Remove all component declarations
+   - Remove all component instantiations
+   - Preserve all functionality"""
+        
         prompt = f"""You are a VHDL repair expert. Fix this VHDL code to compile with GHDL VHDL-2008.
 
 Requirements:
-1. Fix all syntax and compilation errors
-2. If the design uses multiple entities/components (hierarchical), flatten it into a single entity
-3. Preserve functionality
-4. Return ONLY the corrected VHDL code, no explanations
+1. Fix all syntax and compilation errors shown in the GHDL error log
+2. Ensure the design compiles with: ghdl -a --std=08{flatten_instruction}
+4. Output ONLY valid VHDL code. Do NOT add any explanations, backticks, markdown, comments, or text outside the code.
 
 Original VHDL:
-```vhdl
 {vhdl_code}
-```
 
-GHDL Error:
+GHDL Error Log:
 {error_log}
 
-Return the corrected VHDL code:"""
+Return ONLY the corrected VHDL code:"""
         
         response = self.call_ai(prompt)
         if not response:
@@ -224,6 +256,9 @@ Return the corrected VHDL code:"""
                 
                 vhdl_code = self.extract_vhdl(original_code)
                 
+                # Check if design is hierarchical
+                was_hierarchical = self.is_hierarchical(vhdl_code)
+                
                 # Attempt repairs
                 repaired = False
                 for attempt in range(self.max_retries):
@@ -242,6 +277,8 @@ Return the corrected VHDL code:"""
                         entry["original_error"] = original_error
                         entry["repaired_code"] = repaired_code
                         entry["repair_attempts"] = attempt + 1
+                        entry["was_hierarchical"] = was_hierarchical
+                        entry["flattened"] = was_hierarchical  # If hierarchical, it was flattened
                         f_repaired.write(json.dumps(entry) + "\n")
                         f_repaired.flush()
                         repaired = True

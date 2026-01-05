@@ -185,20 +185,38 @@ class TestbenchGenerator:
                 pass
     
     def generate_corner_cases(self, vhdl_code: str, entity_name: str) -> Optional[str]:
-        """Generate corner cases for design."""
+        """
+        Generate comprehensive corner cases for design.
+        
+        Focuses on:
+        - Boundary conditions
+        - Reset behaviors
+        - Edge cases and race conditions
+        - Invalid/abnormal inputs
+        - Timing-critical scenarios
+        """
         prompt_template = random.choice(self.corner_case_prompts)
         prompt = f"""{prompt_template.format(entity=entity_name)}
 
-VHDL Design:
-```vhdl
+VHDL Design to Analyze:
 {vhdl_code}
-```
 
-Provide a comprehensive list of corner cases to verify this design.
-Wrap your response with:
+Generate a comprehensive, structured list of corner cases covering:
+1. Boundary conditions (min/max values, overflows, underflows)
+2. Reset and initialization behaviors
+3. Edge cases that could cause failures
+4. Invalid or abnormal input combinations
+5. Timing-sensitive scenarios
+6. State machine edge cases (if applicable)
+
+Format your response STRICTLY as:
 --CORNER CASES START
+1. [First corner case description]
+2. [Second corner case description]
 ...
---CORNER CASES END"""
+--CORNER CASES END
+
+Provide ONLY the corner case list, no other text."""
         
         response = self.call_ai(prompt)
         if not response:
@@ -207,28 +225,46 @@ Wrap your response with:
         return self.extract_corner_cases(response)
     
     def generate_testbench(self, vhdl_code: str, corner_cases: str, entity_name: str) -> Optional[str]:
-        """Generate testbench for design."""
+        """
+        Generate self-checking testbench covering all corner cases.
+        
+        Args:
+            vhdl_code: Design under test
+            corner_cases: List of corner cases to cover
+            entity_name: DUT entity name
+            
+        Returns:
+            Generated testbench code or None
+        """
         prompt_template = random.choice(self.testbench_prompts)
         prompt = f"""{prompt_template.format(entity=entity_name)}
 
-Design to Test:
-```vhdl
+Design Under Test:
 {vhdl_code}
-```
 
-Corner Cases to Cover:
+Corner Cases to Cover (ALL must be tested):
 {corner_cases}
 
 Requirements:
 1. Use VHDL-2008 standard
-2. Create self-checking testbench with assertions
-3. Cover ALL listed corner cases
-4. Use meaningful signal names and comments
+2. Create a self-checking testbench with assertions or report statements
+3. Cover EVERY corner case listed above - be thorough and comprehensive
+4. Use meaningful signal names and add comments explaining each test
+5. Include proper timing between test vectors
+6. Report test results (pass/fail) for each corner case
+7. Entity name should end with "_tb" or "testbench"
+8. Instantiate the design under test properly
 
-Wrap your testbench with:
+Format your testbench STRICTLY as:
 --VHDL TESTBENCH START
+library ieee;
+use ieee.std_logic_1164.all;
 ...
---VHDL TESTBENCH END"""
+[complete testbench code]
+...
+--VHDL TESTBENCH END
+
+Provide ONLY the testbench code between markers, no other text."""
         
         response = self.call_ai(prompt, max_tokens=12000)
         if not response:
@@ -293,11 +329,13 @@ Wrap your testbench with:
                 if not tb_entity:
                     continue
                 
-                # First validate design, then testbench
+                # Critical: Re-compile design before testbench validation
+                # This ensures the testbench analysis finds an up-to-date compiled DUT
                 design_ok, _ = self.validate_vhdl(vhdl_code, entity_name)
                 if not design_ok:
                     continue
                 
+                # Now validate testbench (design must be analyzed first)
                 tb_ok, _ = self.validate_vhdl(testbench, tb_entity)
                 if not tb_ok:
                     continue
